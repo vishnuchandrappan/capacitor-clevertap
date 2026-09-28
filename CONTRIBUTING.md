@@ -1,52 +1,61 @@
 # Contributing
 
-This guide provides instructions for contributing to this Capacitor plugin.
+## Setup
 
-## Developing
-
-### Local Setup
-
-1. Fork and clone the repo.
-1. Install the dependencies.
-
-    ```shell
-    npm install
-    ```
-
-1. Install SwiftLint if you're on macOS.
-
-    ```shell
-    brew install swiftlint
-    ```
-
-### Scripts
-
-#### `npm run build`
-
-Build the plugin web assets and generate plugin API documentation using [`@capacitor/docgen`](https://github.com/ionic-team/capacitor-docgen).
-
-It will compile the TypeScript code from `src/` into ESM JavaScript in `dist/esm/`. These files are used in apps with bundlers when your plugin is imported.
-
-Then, Rollup will bundle the code into a single file at `dist/plugin.js`. This file is used in apps without bundlers by including it as a script in `index.html`.
-
-#### `npm run verify`
-
-Build and validate the web and native projects.
-
-This is useful to run in CI to verify that the plugin builds for all platforms.
-
-#### `npm run lint` / `npm run fmt`
-
-Check formatting and code quality, autoformat/autofix if possible.
-
-This template is integrated with ESLint, Prettier, and SwiftLint. Using these tools is completely optional, but the [Capacitor Community](https://github.com/capacitor-community/) strives to have consistent code style and structure for easier cooperation.
-
-## Publishing
-
-There is a `prepublishOnly` hook in `package.json` which prepares the plugin before publishing, so all you need to do is run:
-
-```shell
-npm publish
+```bash
+npm install
 ```
 
-> **Note**: The [`files`](https://docs.npmjs.com/cli/v7/configuring-npm/package-json#files) array in `package.json` specifies which files get published. If you rename files/directories or add files elsewhere, you may need to update it.
+To build the native code you also need:
+
+- **Android:** JDK 21 and the Android SDK. Android Studio's bundled JDK works:
+  `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
+- **iOS:** Xcode.
+- **Linting Swift (optional):** SwiftLint, `brew install swiftlint`.
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run build` | Compiles `src/` to `dist/` and regenerates the API section of `README.md` from the JSDoc in `src/definitions.ts`. |
+| `npm run verify` | Builds the web, Android and iOS code. Run it before opening a PR. Also available per platform: `verify:web`, `verify:android`, `verify:ios`. |
+| `npm run lint` / `npm run fmt` | Checks / fixes formatting with ESLint, Prettier (TypeScript and Java) and SwiftLint. |
+
+iOS tests run on a simulator:
+
+```bash
+xcodebuild test -scheme CapluginsCapacitorClevertap -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+## Making changes
+
+- **Docs:** edit the JSDoc in `src/definitions.ts`, then run `npm run build`. Don't edit the API section of `README.md` by hand; it's between the `docgen` markers and gets overwritten.
+- **Adding a method:** add it to `src/definitions.ts`, to `CleverTapAnalyticsPlugin.java` as a `@PluginMethod`, and to `CleverTapPlugin.swift` (both the method and the `pluginMethods` list). Also add it to the expected set in `ios/Tests/CleverTapPluginTests/CleverTapPluginTests.swift`. A method missing from one platform rejects with "not implemented" at runtime, which is how `setDebugLevel` broke on Android.
+- **Android plugin methods must not throw.** Capacitor rethrows exceptions from `@PluginMethod`s on its plugin thread, which crashes the app. Validate arguments and `call.reject(...)` instead.
+- **Updating the CleverTap SDKs:**
+  - Android: the defaults in the `ext` block of `android/build.gradle`.
+  - iOS: the dependency requirements in `CapluginsCapacitorClevertap.podspec` and `Package.swift`.
+  - Docs: the versions table in `README.md` and `CHANGELOG.md`.
+
+  Check CleverTap's changelogs for breaking changes first: [Android](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md), [iOS](https://github.com/CleverTap/clevertap-ios-sdk/blob/master/CHANGELOG.md).
+
+## Releasing
+
+1. Update `version` in `package.json` and add a section to `CHANGELOG.md`.
+2. Run `npm run verify`.
+3. Publish. `prepublishOnly` runs the build first.
+
+   ```bash
+   npm publish --access public
+   ```
+
+4. Tag the release and push the tag:
+
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+## Upstream
+
+This package is a fork of [`capacitor-clevertap`](https://github.com/daviozolin/capacitor-clevertap). Fixes that apply there too can be offered upstream; see [daviozolin/capacitor-clevertap#1](https://github.com/daviozolin/capacitor-clevertap/pull/1).
