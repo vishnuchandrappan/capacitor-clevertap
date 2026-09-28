@@ -374,8 +374,8 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
             Context context = getContext().getApplicationContext();
             geofence = CTGeofenceAPI.getInstance(context);
 
-            geofence.init(ctGeofenceSettings, clevertap);
-
+            // Listeners go in before init(): init() starts the async task that
+            // fires OnGeofenceApiInitialized.
             geofence.setOnGeofenceApiInitializedListener(
                     new CTGeofenceAPI.OnGeofenceApiInitializedListener() {
                         @Override
@@ -413,18 +413,7 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
                         }
                     });
 
-            geofence.setCtLocationUpdatesListener(
-                    new CTLocationUpdatesListener() {
-                        @Override
-                        public void onLocationUpdates(Location location) {
-                            JSObject ret = new JSObject();
-                            ret.put("lat", location.getLatitude());
-                            ret.put("lng", location.getLongitude());
-                            notifyListeners("locationUpdateListener", ret);
-                            Log.d("CTGeofence", "new location Lat: " + location.getLatitude() + " and Long: "
-                                    + location.getLongitude());
-                        }
-                    });
+            geofence.init(ctGeofenceSettings, clevertap);
 
             call.resolve();
         } catch (IllegalStateException e) {
