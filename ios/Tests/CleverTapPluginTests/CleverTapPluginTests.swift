@@ -1,15 +1,18 @@
 import XCTest
 @testable import CleverTapPlugin
 
-class CleverTapTests: XCTestCase {
-    func testEcho() {
-        // This is an example of a functional test case for a plugin.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+class CleverTapPluginTests: XCTestCase {
+    func testRegistersTheJavaScriptAPI() {
+        let plugin = CleverTapPlugin()
+        XCTAssertEqual(plugin.jsName, "CleverTapAnalytics")
 
-        let implementation = CleverTapAnalytics()
-        let value = "Hello, World!"
-        let result = implementation.echo(value)
-
-        XCTAssertEqual(value, result)
+        // Every method in src/definitions.ts except triggerLocation, which is Android-only.
+        let expected: Set<String> = [
+            "profileGetID", "recordEvent", "recordChargedEvent", "profileIncrementValue", "profilePush",
+            "setLocation", "setPushTokenAs", "onUserLogin", "stopGeofence", "initGeofence", "setDebugLevel",
+            "checkPermissions", "requestPermissions"
+        ]
+        let registered = Set(plugin.pluginMethods.map { $0.name })
+        XCTAssertEqual(registered, expected)
     }
 }
