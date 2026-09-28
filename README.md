@@ -675,12 +675,12 @@ otherwise, and rejects if `NSLocationWhenInUseUsageDescription` is missing.
 A tapped CleverTap push. Every key of the push payload is also included as a
 top-level property, including custom key-value pairs and CleverTap's `wzrk_*` keys.
 
-| Prop        | Type                | Description                                                     |
-| ----------- | ------------------- | --------------------------------------------------------------- |
-| **`title`** | <code>string</code> | Notification title.                                             |
-| **`body`**  | <code>string</code> | Notification body.                                              |
-| **`data`**  | <code>any</code>    | Not populated: custom key-value pairs are top-level properties. |
-| **`image`** | <code>string</code> | Big-picture image URL, if the notification has one.             |
+| Prop        | Type                | Description                                                          |
+| ----------- | ------------------- | -------------------------------------------------------------------- |
+| **`title`** | <code>string</code> | Notification title.                                                  |
+| **`body`**  | <code>string</code> | Notification body.                                                   |
+| **`data`**  | <code>any</code>    | Not populated: custom key-value pairs are top-level properties.      |
+| **`image`** | <code>string</code> | Big-picture image URL. Missing when the notification has no picture. |
 
 
 #### GeofenceStatusChange

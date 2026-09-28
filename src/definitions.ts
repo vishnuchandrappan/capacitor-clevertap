@@ -285,6 +285,6 @@ export interface CleverTapPushNotificationPayload {
   body: string;
   /** Not populated: custom key-value pairs are top-level properties. */
   data: any;
-  /** Big-picture image URL, if the notification has one. */
-  image: string;
+  /** Big-picture image URL. Missing when the notification has no picture. */
+  image?: string;
 }
