@@ -30,6 +30,7 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
       name: "stopGeofence", returnType: CAPPluginReturnPromise),
   ]
   private let implementation = CleverTapAnalytics()
+  private var geofenceObservers: [NSObjectProtocol] = []
 
   @objc func profileGetID(_ call: CAPPluginCall) {
     call.resolve([
@@ -45,7 +46,11 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
   }
 
   @objc func initGeofence(_ call: CAPPluginCall) {
-    NotificationCenter.default.addObserver(
+    // Calling initGeofence again must not stack another set of observers.
+    geofenceObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    geofenceObservers.removeAll()
+
+    geofenceObservers.append(NotificationCenter.default.addObserver(
       forName: NSNotification.Name(rawValue: "CleverTapGeofenceEntered"), object: nil,
       queue: OperationQueue.main
     ) { (notification) in
@@ -59,9 +64,9 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
             "name": "Geofence Entered"
           ])
       }
-    }
+    })
 
-    NotificationCenter.default.addObserver(
+    geofenceObservers.append(NotificationCenter.default.addObserver(
       forName: NSNotification.Name(rawValue: "CleverTapGeofenceExited"), object: nil,
       queue: OperationQueue.main
     ) { (notification) in
@@ -75,9 +80,9 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
             "name": "Geofence Exited"
           ])
       }
-    }
+    })
 
-    NotificationCenter.default.addObserver(
+    geofenceObservers.append(NotificationCenter.default.addObserver(
       forName: NSNotification.Name(rawValue: "CleverTapGeofencesDidUpdateNotification"),
       object: nil, queue: OperationQueue.main
     ) { (notification) in
@@ -91,7 +96,7 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
             "name": "Geofence Updated"
           ])
       }
-    }
+    })
 
     call.resolve([
       "status": "Geofence Initialized"
