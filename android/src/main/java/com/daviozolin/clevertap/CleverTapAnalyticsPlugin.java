@@ -238,6 +238,14 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void setPushTokenAs(PluginCall call) {
+        String token = call.getString("token");
+        if (token == null) {
+            call.reject("Push token missing or malformatted");
+            return;
+        }
+
+        clevertap.pushFcmRegistrationId(token, true);
+
         call.resolve();
     }
 
