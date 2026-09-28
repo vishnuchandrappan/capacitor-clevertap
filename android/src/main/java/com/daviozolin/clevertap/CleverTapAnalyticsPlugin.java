@@ -6,6 +6,8 @@ import android.content.pm.PackageManager;
 import android.content.Context;
 import android.location.Location;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.SystemClock;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -17,6 +19,7 @@ import com.clevertap.android.geofence.interfaces.CTGeofenceEventsListener;
 import com.clevertap.android.geofence.interfaces.CTLocationUpdatesListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.sdk.Utils;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -24,6 +27,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -37,6 +41,16 @@ import org.json.JSONObject;
         @Permission(strings = { Manifest.permission.ACCESS_BACKGROUND_LOCATION }, alias = "backgroundUpdate")
 })
 public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificationListener {
+
+    // Present on every CleverTap push (Constants.NOTIFICATION_TAG / NOTIFICATION_ID_TAG in the SDK).
+    private static final String CLEVERTAP_PUSH_KEY = "wzrk_pn";
+    private static final String CLEVERTAP_PUSH_ID_KEY = "wzrk_id";
+    private static final long PUSH_CLICK_DEDUPE_WINDOW_MS = 5000;
+
+    // Static so they survive the Bridge (and this plugin) being recreated with the activity.
+    private static WeakReference<Intent> lastPushIntent = new WeakReference<>(null);
+    private static Object lastPushClickId;
+    private static long lastPushClickTime;
 
     CleverTapAPI clevertap;
     CTGeofenceAPI geofence;
@@ -54,13 +68,43 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     protected void handleOnNewIntent(Intent intent) {
         super.handleOnNewIntent(intent);
         Log.d("CleverTapCustomPlugin", "handleOnNewIntent called");
+        Bundle extras = intent.getExtras();
         if (clevertap != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            clevertap.pushNotificationClickedEvent(intent.getExtras());
+            clevertap.pushNotificationClickedEvent(extras);
         }
+
+        // CleverTap's click callback misses taps that launch the app: with ActivityLifecycleCallback
+        // registered, CleverTap handles them in Activity.onCreate(), before plugins are loaded. The push
+        // extras are on the launch intent, which BridgeActivity passes here once plugins are loaded.
+        if (extras == null || !extras.containsKey(CLEVERTAP_PUSH_KEY)) {
+            return;
+        }
+        // Reopening the task from Recents re-delivers the original push intent, and so does
+        // BridgeActivity when the activity is recreated; neither is a new tap.
+        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0 || intent == lastPushIntent.get()) {
+            return;
+        }
+        lastPushIntent = new WeakReference<>(intent);
+        emitPushClicked(Utils.convertBundleObjectToHashMap(extras));
     }
 
     @Override
     public void onNotificationClickedPayloadReceived(HashMap<String, Object> hashMap) {
+        emitPushClicked(hashMap);
+    }
+
+    private void emitPushClicked(HashMap<String, Object> hashMap) {
+        // A tap on a running app is reported by both CleverTap's callback and the activity intent.
+        synchronized (CleverTapAnalyticsPlugin.class) {
+            Object id = hashMap.get(CLEVERTAP_PUSH_ID_KEY);
+            long now = SystemClock.elapsedRealtime();
+            if (id != null && id.equals(lastPushClickId) && now - lastPushClickTime < PUSH_CLICK_DEDUPE_WINDOW_MS) {
+                return;
+            }
+            lastPushClickId = id;
+            lastPushClickTime = now;
+        }
+
         JSObject data = new JSObject();
 
         try {
@@ -86,7 +130,9 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
         }
 
         try {
-            notifyListeners("onPushClicked", data);
+            // Retain until a listener is attached: a tap that cold-starts the app
+            // arrives before the web app has had a chance to call addListener().
+            notifyListeners("onPushClicked", data, true);
         } catch (Exception ignored) {
         }
     }
