@@ -13,7 +13,6 @@ import android.app.NotificationManager;
 import android.util.Log;
 import com.clevertap.android.geofence.CTGeofenceAPI;
 import com.clevertap.android.geofence.CTGeofenceSettings;
-import com.clevertap.android.geofence.Logger;
 import com.clevertap.android.geofence.interfaces.CTGeofenceEventsListener;
 import com.clevertap.android.geofence.interfaces.CTLocationUpdatesListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
@@ -45,7 +44,6 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     @Override
     public void load() {
         super.load();
-        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         clevertap = CleverTapAPI.getDefaultInstance(getContext().getApplicationContext());
         if (clevertap != null) {
             clevertap.setCTPushNotificationListener(this);
@@ -252,7 +250,8 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
             CTGeofenceSettings ctGeofenceSettings = new CTGeofenceSettings.Builder()
                     .enableBackgroundLocationUpdates(true)
-                    .setLogLevel(Logger.VERBOSE)
+                    // Geofence Logger levels share CleverTapAPI.LogLevel's values.
+                    .setLogLevel(CleverTapAPI.getDebugLevel())
                     .setLocationAccuracy(CTGeofenceSettings.ACCURACY_HIGH)
                     .setLocationFetchMode(CTGeofenceSettings.FETCH_CURRENT_LOCATION_PERIODIC)
                     .setGeofenceMonitoringCount(50)
