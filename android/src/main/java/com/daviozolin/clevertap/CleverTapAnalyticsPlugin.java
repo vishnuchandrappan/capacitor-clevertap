@@ -94,10 +94,17 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     }
 
     @PluginMethod
-    public void setLogLevel(PluginCall call) {
-        JSObject ret = new JSObject();
+    public void setDebugLevel(PluginCall call) {
         Integer level = call.getInt("level");
+        if (level == null) {
+            call.reject("Debug level missing or malformatted");
+            return;
+        }
 
+        // DEBUG_LEVEL values (-1, 0, 2, 3) match CleverTapAPI.LogLevel on Android.
+        CleverTapAPI.setDebugLevel(level);
+
+        JSObject ret = new JSObject();
         ret.put("status", "Log level set to " + level);
         call.resolve(ret);
     }
