@@ -1,14 +1,25 @@
-# capacitor-clevertap
+# @caplugins/capacitor-clevertap
 
-This plugin partially implements CleverTapAnalytics SDK. It's still under development and has many missing functions.
+Capacitor plugin for the CleverTap SDK on Android and iOS. It covers events, charged events, user profiles, push tokens and push taps, and geofencing. It doesn't wrap the whole SDK (no App Inbox or in-app message callbacks yet).
 
-Follow [`iOS`](https://developer.clevertap.com/docs/ios-quickstart-guide) and [`Android`](https://developer.clevertap.com/docs/android-quickstart-guide) initial setup instructions.
+Forked from [`capacitor-clevertap`](https://github.com/daviozolin/capacitor-clevertap) by Davi Ozolin. This fork updates the CleverTap SDKs and fixes several bugs; the same fixes are proposed upstream in [daviozolin/capacitor-clevertap#1](https://github.com/daviozolin/capacitor-clevertap/pull/1).
+
+Follow CleverTap's [iOS](https://developer.clevertap.com/docs/ios-quickstart-guide) and [Android](https://developer.clevertap.com/docs/android-quickstart-guide) setup guides first.
 
 ## Install
 
+Supports Capacitor 7 and 8, with CocoaPods or Swift Package Manager on iOS.
+
 ```bash
-npm install capacitor-clevertap
+npm install @caplugins/capacitor-clevertap
 npx cap sync
+```
+
+```typescript
+import { CleverTapAnalytics, DEBUG_LEVEL } from '@caplugins/capacitor-clevertap';
+
+await CleverTapAnalytics.setDebugLevel({ level: DEBUG_LEVEL.INFO });
+await CleverTapAnalytics.onUserLogin({ profileProperties: { Identity: 'user-123' } });
 ```
 
 ## API

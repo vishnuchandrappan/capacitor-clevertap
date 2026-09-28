@@ -1,7 +1,7 @@
 {
-  "name": "capacitor-clevertap",
-  "version": "7.0.2",
-  "description": "Implements CleverTap SDK",
+  "name": "@caplugins/capacitor-clevertap",
+  "version": "1.0.0",
+  "description": "Capacitor plugin for the CleverTap SDK (Android and iOS)",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -15,14 +15,17 @@
     "Package.swift",
     "CapluginsCapacitorClevertap.podspec"
   ],
-  "author": "Davi Ozolin",
+  "author": "Vish <hello@iamvishnu.dev>",
+  "contributors": [
+    "Davi Ozolin (original capacitor-clevertap)"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daviozolin/capacitor-clevertap.git"
+    "url": "git+https://github.com/vishnuchandrappan/capacitor-clevertap.git"
   },
   "bugs": {
-    "url": "https://github.com/daviozolin/capacitor-clevertap/issues"
+    "url": "https://github.com/vishnuchandrappan/capacitor-clevertap/issues"
   },
   "keywords": [
     "capacitor",
