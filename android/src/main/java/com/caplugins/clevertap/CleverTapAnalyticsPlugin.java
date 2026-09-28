@@ -1,4 +1,4 @@
-package com.daviozolin.clevertap;
+package com.caplugins.clevertap;
 
 import android.Manifest;
 import android.content.Intent;

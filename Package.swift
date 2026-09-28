@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "CapacitorClevertap",
+    name: "CapluginsCapacitorClevertap",
     platforms: [.iOS(.v14)],
     products: [
         .library(
-            name: "CapacitorClevertap",
+            name: "CapluginsCapacitorClevertap",
             targets: ["CleverTapPlugin"])
     ],
     dependencies: [
