@@ -3,7 +3,7 @@ import CoreLocation
 import Foundation
 
 @objc(CleverTapPlugin)
-public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
+public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelegate {
   public let identifier = "CleverTapPlugin"
   public let jsName = "CleverTapAnalytics"
   public let pluginMethods: [CAPPluginMethod] = [
@@ -31,6 +31,9 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
   ]
   private let implementation = CleverTapAnalytics()
   private var geofenceObservers: [NSObjectProtocol] = []
+  // Only touched on the main queue.
+  private var locationManager: CLLocationManager?
+  private var pendingPermissionCalls: [CAPPluginCall] = []
 
   @objc func profileGetID(_ call: CAPPluginCall) {
     call.resolve([
@@ -130,9 +133,43 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
   }
 
   @objc override public func requestPermissions(_ call: CAPPluginCall) {
-    let locationManager = CLLocationManager()
+    // Without the usage descriptions iOS ignores the request: no prompt and no delegate callback.
+    let hasUsageDescription = { (key: String) in Bundle.main.object(forInfoDictionaryKey: key) != nil }
+    guard hasUsageDescription("NSLocationWhenInUseUsageDescription") else {
+      call.reject("NSLocationWhenInUseUsageDescription is missing from Info.plist")
+      return
+    }
+    let canRequestAlways = hasUsageDescription("NSLocationAlwaysAndWhenInUseUsageDescription")
 
-    locationManager.requestAlwaysAuthorization()
+    // The manager has to outlive this call (the prompt goes away if it is deallocated)
+    // and delivers delegate callbacks on the thread it was created on.
+    DispatchQueue.main.async {
+      let manager = self.locationManager ?? CLLocationManager()
+      self.locationManager = manager
+      manager.delegate = self
+
+      // Only a .notDetermined status is guaranteed to change once the user answers.
+      // In any other state iOS may show nothing (or the one-time "Change to Always
+      // Allow" prompt), so resolve with the current state instead of waiting.
+      let wasNotDetermined = manager.authorizationStatus == .notDetermined
+      if canRequestAlways {
+        manager.requestAlwaysAuthorization()
+      } else {
+        manager.requestWhenInUseAuthorization()
+      }
+      if wasNotDetermined {
+        self.pendingPermissionCalls.append(call)
+      } else {
+        self.checkPermissions(call)
+      }
+    }
+  }
+
+  public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    guard manager.authorizationStatus != .notDetermined else { return }
+    let calls = pendingPermissionCalls
+    pendingPermissionCalls.removeAll()
+    calls.forEach { checkPermissions($0) }
   }
 
   @objc func setDebugLevel(_ call: CAPPluginCall) {
