@@ -52,12 +52,26 @@ export interface CleverTapPlugin {
     listenerFunc: (event: GeofenceStatusChange) => void,
   ): Promise<PluginListenerHandle>;
 
-  checkPermissions(): Promise<{
-    location: PermissionState;
-    backgroundUpdate: PermissionState;
-  }>;
+  checkPermissions(): Promise<PermissionStatus>;
 
-  requestPermissions(): Promise<void>;
+  /**
+   * On Android 11+ the system ignores a request that asks for background
+   * location together with foreground location, so request `location` first
+   * and `backgroundUpdate` in a second call. iOS ignores `permissions` and
+   * always requests "Always" authorization.
+   */
+  requestPermissions(options?: CleverTapPluginPermissions): Promise<PermissionStatus>;
+}
+
+export type CleverTapPermissionType = 'location' | 'backgroundUpdate';
+
+export interface CleverTapPluginPermissions {
+  permissions?: CleverTapPermissionType[];
+}
+
+export interface PermissionStatus {
+  location: PermissionState;
+  backgroundUpdate: PermissionState;
 }
 
 export interface GeofenceStatusChange {

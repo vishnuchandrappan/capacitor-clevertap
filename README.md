@@ -33,7 +33,7 @@ npx cap sync
 * [`addListener('geofenceEnteredListener', ...)`](#addlistenergeofenceenteredlistener-)
 * [`addListener('geofenceExitedListener', ...)`](#addlistenergeofenceexitedlistener-)
 * [`checkPermissions()`](#checkpermissions)
-* [`requestPermissions()`](#requestpermissions)
+* [`requestPermissions(...)`](#requestpermissions)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
 * [Enums](#enums)
@@ -268,19 +268,30 @@ addListener(eventName: 'geofenceExitedListener', listenerFunc: (event: GeofenceS
 ### checkPermissions()
 
 ```typescript
-checkPermissions() => Promise<{ location: PermissionState; backgroundUpdate: PermissionState; }>
+checkPermissions() => Promise<PermissionStatus>
 ```
 
-**Returns:** <code>Promise&lt;{ location: <a href="#permissionstate">PermissionState</a>; backgroundUpdate: <a href="#permissionstate">PermissionState</a>; }&gt;</code>
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
 
 --------------------
 
 
-### requestPermissions()
+### requestPermissions(...)
 
 ```typescript
-requestPermissions() => Promise<void>
+requestPermissions(options?: CleverTapPluginPermissions | undefined) => Promise<PermissionStatus>
 ```
+
+On Android 11+ the system ignores a request that asks for background
+location together with foreground location, so request `location` first
+and `backgroundUpdate` in a second call. iOS ignores `permissions` and
+always requests "Always" authorization.
+
+| Param         | Type                                                                              |
+| ------------- | --------------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#clevertappluginpermissions">CleverTapPluginPermissions</a></code> |
+
+**Returns:** <code>Promise&lt;<a href="#permissionstatus">PermissionStatus</a>&gt;</code>
 
 --------------------
 
@@ -319,12 +330,32 @@ requestPermissions() => Promise<void>
 | **`triggered_lng`** | <code>number</code> |
 
 
+#### PermissionStatus
+
+| Prop                   | Type                                                        |
+| ---------------------- | ----------------------------------------------------------- |
+| **`location`**         | <code><a href="#permissionstate">PermissionState</a></code> |
+| **`backgroundUpdate`** | <code><a href="#permissionstate">PermissionState</a></code> |
+
+
+#### CleverTapPluginPermissions
+
+| Prop              | Type                                   |
+| ----------------- | -------------------------------------- |
+| **`permissions`** | <code>CleverTapPermissionType[]</code> |
+
+
 ### Type Aliases
 
 
 #### PermissionState
 
 <code>'prompt' | 'prompt-with-rationale' | 'granted' | 'denied'</code>
+
+
+#### CleverTapPermissionType
+
+<code>'location' | 'backgroundUpdate'</code>
 
 
 ### Enums
