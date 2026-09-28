@@ -195,6 +195,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     @PluginMethod
     public void profilePush(PluginCall call) throws JSONException {
         JSObject properties = call.getObject("profileProperties");
+        if (properties == null) {
+            call.reject("Profile properties details missing or malformatted");
+            return;
+        }
         HashMap<String, Object> profile = jsObjectToHashMap(properties);
 
         clevertap.pushProfile(profile);
@@ -205,6 +209,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     @PluginMethod
     public void onUserLogin(PluginCall call) throws JSONException {
         JSObject properties = call.getObject("profileProperties");
+        if (properties == null) {
+            call.reject("Profile properties details missing or malformatted");
+            return;
+        }
         HashMap<String, Object> profile = jsObjectToHashMap(properties);
 
         clevertap.onUserLogin(profile);
