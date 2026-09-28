@@ -117,7 +117,7 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
         }
 
         try {
-            data.put("image", data.get("wzrk_bpds"));
+            data.put("image", data.get("wzrk_bp"));
         } catch (Exception ignored) {
         }
 
