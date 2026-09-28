@@ -22,6 +22,7 @@ import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.Utils;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -255,14 +256,23 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void triggerLocation(PluginCall call) {
-        try {
-            CTGeofenceAPI.getInstance(getContext().getApplicationContext()).triggerLocation();
-        } catch (IllegalStateException e) {
-            Log.d("CTGeofence", "exception " + e.getMessage());
+        // The Geofence SDK silently ignores triggerLocation() before init() or without location permission.
+        if (geofence == null) {
+            call.reject("initGeofence() must be called before triggerLocation()");
+            return;
         }
-        JSObject ret = new JSObject();
-        ret.put("value", "New value from Android");
-        call.resolve(ret);
+        if (getPermissionState("location") != PermissionState.GRANTED) {
+            call.reject("Location permission not granted");
+            return;
+        }
+        try {
+            geofence.triggerLocation();
+        } catch (IllegalStateException e) {
+            // Thrown after stopGeofence() has deactivated the SDK.
+            call.reject(e.getMessage());
+            return;
+        }
+        call.resolve();
     }
 
     @PluginMethod
