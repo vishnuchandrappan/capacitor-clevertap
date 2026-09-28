@@ -45,7 +45,6 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
   }
 
   @objc func initGeofence(_ call: CAPPluginCall) {
-    call.keepAlive = true
     NotificationCenter.default.addObserver(
       forName: NSNotification.Name(rawValue: "CleverTapGeofenceEntered"), object: nil,
       queue: OperationQueue.main

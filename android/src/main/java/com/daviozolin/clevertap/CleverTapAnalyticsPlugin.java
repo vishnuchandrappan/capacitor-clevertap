@@ -255,7 +255,6 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void triggerLocation(PluginCall call) {
-        call.setKeepAlive(true);
         try {
             CTGeofenceAPI.getInstance(getContext().getApplicationContext()).triggerLocation();
         } catch (IllegalStateException e) {
@@ -354,7 +353,6 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
         }
 
         try {
-            call.setKeepAlive(true);
             Log.d("CTGeofence", "Initializing Clevertap Geofence Plugin");
             Log.d("CTGeofence", "Clevertap instance initiated with " + clevertap.toString());
 
