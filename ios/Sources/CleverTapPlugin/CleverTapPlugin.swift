@@ -54,7 +54,7 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin {
       } else {
         print("Failed to cast notification.userInfo to [String: Any]")
         self.notifyListeners(
-          "geofenceExitedListener",
+          "geofenceEnteredListener",
           data: [
             "name": "Geofence Entered"
           ])
