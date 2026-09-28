@@ -54,7 +54,7 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     protected void handleOnNewIntent(Intent intent) {
         super.handleOnNewIntent(intent);
         Log.d("CleverTapCustomPlugin", "handleOnNewIntent called");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (clevertap != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             clevertap.pushNotificationClickedEvent(intent.getExtras());
         }
     }
@@ -91,6 +91,18 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
         }
     }
 
+    /**
+     * Rejects the call when there is no CleverTap instance, which happens when
+     * CLEVERTAP_ACCOUNT_ID / CLEVERTAP_TOKEN are missing from AndroidManifest.xml.
+     */
+    private boolean ensureCleverTap(PluginCall call) {
+        if (clevertap == null) {
+            call.reject("CleverTap is not initialized. Check CLEVERTAP_ACCOUNT_ID and CLEVERTAP_TOKEN in AndroidManifest.xml");
+            return false;
+        }
+        return true;
+    }
+
     @PluginMethod
     public void setDebugLevel(PluginCall call) {
         Integer level = call.getInt("level");
@@ -109,6 +121,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void profileGetID(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         JSObject ret = new JSObject();
         String id = clevertap.getCleverTapID();
         ret.put("id", id);
@@ -117,6 +133,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void recordEvent(PluginCall call) throws JSONException {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         String event = call.getString("event");
         if (event == null) {
             call.reject("Event name missing or malformatted");
@@ -135,6 +155,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void recordChargedEvent(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         JSObject details = call.getObject("details");
         if (details == null) {
             call.reject("Purchase details missing or malformatted");
@@ -162,6 +186,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void profileIncrementValue(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         String key = call.getString("key");
         if (key == null) {
             call.reject("Key missing or malformatted");
@@ -194,6 +222,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void profilePush(PluginCall call) throws JSONException {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         JSObject properties = call.getObject("profileProperties");
         if (properties == null) {
             call.reject("Profile properties details missing or malformatted");
@@ -208,6 +240,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void onUserLogin(PluginCall call) throws JSONException {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         JSObject properties = call.getObject("profileProperties");
         if (properties == null) {
             call.reject("Profile properties details missing or malformatted");
@@ -222,6 +258,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void setLocation(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         Double lat = call.getDouble("lat");
         Double lng = call.getDouble("lng");
 
@@ -246,6 +286,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void setPushTokenAs(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         String token = call.getString("token");
         if (token == null) {
             call.reject("Push token missing or malformatted");
@@ -259,6 +303,10 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     @PluginMethod
     public void initGeofence(PluginCall call) {
+        if (!ensureCleverTap(call)) {
+            return;
+        }
+
         try {
             call.setKeepAlive(true);
             Log.d("CTGeofence", "Initializing Clevertap Geofence Plugin");
