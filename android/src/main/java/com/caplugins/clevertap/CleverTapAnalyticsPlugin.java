@@ -69,6 +69,12 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
     protected void handleOnNewIntent(Intent intent) {
         super.handleOnNewIntent(intent);
         Log.d("CleverTapCustomPlugin", "handleOnNewIntent called");
+        // Reopening the task from Recents re-delivers the original push intent, and so does
+        // BridgeActivity when the activity is recreated. Neither is a new tap, so don't track
+        // it (CleverTap would report it back through onNotificationClickedPayloadReceived) or emit it.
+        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0 || intent == lastPushIntent.get()) {
+            return;
+        }
         Bundle extras = intent.getExtras();
         if (clevertap != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             clevertap.pushNotificationClickedEvent(extras);
@@ -78,11 +84,6 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
         // registered, CleverTap handles them in Activity.onCreate(), before plugins are loaded. The push
         // extras are on the launch intent, which BridgeActivity passes here once plugins are loaded.
         if (extras == null || !extras.containsKey(CLEVERTAP_PUSH_KEY)) {
-            return;
-        }
-        // Reopening the task from Recents re-delivers the original push intent, and so does
-        // BridgeActivity when the activity is recreated; neither is a new tap.
-        if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0 || intent == lastPushIntent.get()) {
             return;
         }
         lastPushIntent = new WeakReference<>(intent);
