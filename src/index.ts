@@ -16,8 +16,7 @@ export enum DEBUG_LEVEL {
   VERBOSE = 3,
 }
 
-const CleverTapAnalytics =
-  registerPlugin<CleverTapPlugin>('CleverTapAnalytics');
+const CleverTapAnalytics = registerPlugin<CleverTapPlugin>('CleverTapAnalytics');
 
 export * from './definitions';
 export { CleverTapAnalytics };

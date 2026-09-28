@@ -1,25 +1,25 @@
 package com.caplugins.clevertap;
 
 import android.Manifest;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.Context;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import android.app.NotificationManager;
-import android.util.Log;
 import com.clevertap.android.geofence.CTGeofenceAPI;
 import com.clevertap.android.geofence.CTGeofenceSettings;
 import com.clevertap.android.geofence.interfaces.CTGeofenceEventsListener;
 import com.clevertap.android.geofence.interfaces.CTLocationUpdatesListener;
-import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.Utils;
+import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
@@ -36,11 +36,13 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-@CapacitorPlugin(name = "CleverTapAnalytics", permissions = {
-        @Permission(strings = { Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION }, alias = "location"),
+@CapacitorPlugin(
+    name = "CleverTapAnalytics",
+    permissions = {
+        @Permission(strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }, alias = "location"),
         @Permission(strings = { Manifest.permission.ACCESS_BACKGROUND_LOCATION }, alias = "backgroundUpdate")
-})
+    }
+)
 public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificationListener {
 
     // Present on every CleverTap push (Constants.NOTIFICATION_TAG / NOTIFICATION_ID_TAG in the SDK).
@@ -118,25 +120,21 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
         try {
             data.put("image", data.get("wzrk_bp"));
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         try {
             data.put("body", data.get("nm"));
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         try {
             data.put("title", data.get("nt"));
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         try {
             // Retain until a listener is attached: a tap that cold-starts the app
             // arrives before the web app has had a chance to call addListener().
             notifyListeners("onPushClicked", data, true);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
     }
 
     /**
@@ -369,17 +367,17 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
             Log.d("CTGeofence", "Clevertap instance initiated with " + clevertap.toString());
 
             CTGeofenceSettings ctGeofenceSettings = new CTGeofenceSettings.Builder()
-                    .enableBackgroundLocationUpdates(true)
-                    // Geofence Logger levels share CleverTapAPI.LogLevel's values.
-                    .setLogLevel(CleverTapAPI.getDebugLevel())
-                    .setLocationAccuracy(CTGeofenceSettings.ACCURACY_HIGH)
-                    .setLocationFetchMode(CTGeofenceSettings.FETCH_CURRENT_LOCATION_PERIODIC)
-                    .setGeofenceMonitoringCount(50)
-                    .setInterval(30 * 60 * 1000)
-                    .setFastestInterval(30 * 60 * 1000)
-                    .setSmallestDisplacement(200)
-                    .setGeofenceNotificationResponsiveness(0)
-                    .build();
+                .enableBackgroundLocationUpdates(true)
+                // Geofence Logger levels share CleverTapAPI.LogLevel's values.
+                .setLogLevel(CleverTapAPI.getDebugLevel())
+                .setLocationAccuracy(CTGeofenceSettings.ACCURACY_HIGH)
+                .setLocationFetchMode(CTGeofenceSettings.FETCH_CURRENT_LOCATION_PERIODIC)
+                .setGeofenceMonitoringCount(50)
+                .setInterval(30 * 60 * 1000)
+                .setFastestInterval(30 * 60 * 1000)
+                .setSmallestDisplacement(200)
+                .setGeofenceNotificationResponsiveness(0)
+                .build();
 
             Context context = getContext().getApplicationContext();
             geofence = CTGeofenceAPI.getInstance(context);
@@ -387,41 +385,44 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
             // Listeners go in before init(): init() starts the async task that
             // fires OnGeofenceApiInitialized.
             geofence.setOnGeofenceApiInitializedListener(
-                    new CTGeofenceAPI.OnGeofenceApiInitializedListener() {
-                        @Override
-                        public void OnGeofenceApiInitialized() {
-                            Log.d("CTGeofence", "initialized fence");
-                            JSObject ret = new JSObject();
-                            ret.put("status", "INITIALIZED");
-                            notifyListeners("geofenceInitializedListener", ret);
-                        }
-                    });
+                new CTGeofenceAPI.OnGeofenceApiInitializedListener() {
+                    @Override
+                    public void OnGeofenceApiInitialized() {
+                        Log.d("CTGeofence", "initialized fence");
+                        JSObject ret = new JSObject();
+                        ret.put("status", "INITIALIZED");
+                        notifyListeners("geofenceInitializedListener", ret);
+                    }
+                }
+            );
 
             geofence.setCtGeofenceEventsListener(
-                    new CTGeofenceEventsListener() {
-                        @Override
-                        public void onGeofenceEnteredEvent(JSONObject jsonObject) {
-                            Log.d("CTGeofence", "onGeofenceEnteredEvent triggered");
-                            notifyListeners("geofenceEnteredListener", JSONObjectToJSObject(jsonObject));
-                        }
+                new CTGeofenceEventsListener() {
+                    @Override
+                    public void onGeofenceEnteredEvent(JSONObject jsonObject) {
+                        Log.d("CTGeofence", "onGeofenceEnteredEvent triggered");
+                        notifyListeners("geofenceEnteredListener", JSONObjectToJSObject(jsonObject));
+                    }
 
-                        @Override
-                        public void onGeofenceExitedEvent(JSONObject jsonObject) {
-                            Log.d("CTGeofence", "onGeofenceExitedEvent triggered");
-                            notifyListeners("geofenceExitedListener", JSONObjectToJSObject(jsonObject));
-                        }
-                    });
+                    @Override
+                    public void onGeofenceExitedEvent(JSONObject jsonObject) {
+                        Log.d("CTGeofence", "onGeofenceExitedEvent triggered");
+                        notifyListeners("geofenceExitedListener", JSONObjectToJSObject(jsonObject));
+                    }
+                }
+            );
 
             geofence.setCtLocationUpdatesListener(
-                    new CTLocationUpdatesListener() {
-                        @Override
-                        public void onLocationUpdates(Location location) {
-                            JSObject ret = new JSObject();
-                            ret.put("lat", location.getLatitude());
-                            ret.put("lng", location.getLongitude());
-                            notifyListeners("locationUpdateListener", ret);
-                        }
-                    });
+                new CTLocationUpdatesListener() {
+                    @Override
+                    public void onLocationUpdates(Location location) {
+                        JSObject ret = new JSObject();
+                        ret.put("lat", location.getLatitude());
+                        ret.put("lng", location.getLongitude());
+                        notifyListeners("locationUpdateListener", ret);
+                    }
+                }
+            );
 
             geofence.init(ctGeofenceSettings, clevertap);
 
@@ -470,7 +471,7 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
 
     public JSObject JSONObjectToJSObject(JSONObject jsonObject) {
         JSObject jsObject = new JSObject();
-        for (Iterator<String> it = jsonObject.keys(); it.hasNext();) {
+        for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
             String key = it.next();
             try {
                 Object value = jsonObject.get(key);
