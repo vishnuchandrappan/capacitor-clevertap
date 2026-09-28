@@ -2,25 +2,221 @@
 
 Capacitor plugin for the CleverTap SDK on Android and iOS. It covers events, charged events, user profiles, push tokens and push taps, and geofencing. It doesn't wrap the whole SDK (no App Inbox or in-app message callbacks yet).
 
-Forked from [`capacitor-clevertap`](https://github.com/daviozolin/capacitor-clevertap) by Davi Ozolin. This fork updates the CleverTap SDKs and fixes several bugs; the same fixes are proposed upstream in [daviozolin/capacitor-clevertap#1](https://github.com/daviozolin/capacitor-clevertap/pull/1).
-
-Follow CleverTap's [iOS](https://developer.clevertap.com/docs/ios-quickstart-guide) and [Android](https://developer.clevertap.com/docs/android-quickstart-guide) setup guides first.
+Forked from [`capacitor-clevertap`](https://github.com/daviozolin/capacitor-clevertap) by Davi Ozolin. This fork updates the CleverTap SDKs and fixes several bugs; see the [changelog](CHANGELOG.md). The same fixes are proposed upstream in [daviozolin/capacitor-clevertap#1](https://github.com/daviozolin/capacitor-clevertap/pull/1).
 
 ## Install
-
-Supports Capacitor 7 and 8, with CocoaPods or Swift Package Manager on iOS.
 
 ```bash
 npm install @caplugins/capacitor-clevertap
 npx cap sync
 ```
 
+## Requirements
+
+| | Minimum |
+| --- | --- |
+| Capacitor | 7.x or 8.x |
+| iOS deployment target | 14.0 |
+| iOS package manager | CocoaPods or Swift Package Manager |
+| Android `minSdk` | 23 |
+| Android `compileSdk` / `targetSdk` | 35 (your app's values win) |
+
+Native SDK versions:
+
+| Platform | SDK | Version |
+| --- | --- | --- |
+| Android | `com.clevertap.android:clevertap-android-sdk` | 8.4.1 |
+| Android | `com.clevertap.android:clevertap-geofence-sdk` | 1.4.0 |
+| iOS | `CleverTap-iOS-SDK` / `clevertap-ios-sdk` (SPM) | 7.8.2 or later 7.x |
+| iOS | `CleverTap-Geofence-SDK` / `clevertap-geofence-ios` (SPM) | 1.0.7 or later 1.x |
+
+The Android versions are defaults. If your app's `android/variables.gradle` defines any of these, your values win, so you can move to a newer CleverTap release without waiting for this plugin:
+
+```groovy
+ext {
+    clevertapAndroidSdkVersion = '8.4.1'
+    clevertapGeofenceSdkVersion = '1.4.0'
+    firebaseMessagingVersion = '24.1.0'
+}
+```
+
+## Configuration
+
+Start with CleverTap's [Android](https://developer.clevertap.com/docs/android-quickstart-guide) and [iOS](https://developer.clevertap.com/docs/ios-quickstart-guide) quickstarts. The steps below are the parts that matter in a Capacitor app.
+
+### Android
+
+**1. Credentials.** Add your account ID and token inside `<application>` in `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<meta-data android:name="CLEVERTAP_ACCOUNT_ID" android:value="YOUR_ACCOUNT_ID" />
+<meta-data android:name="CLEVERTAP_TOKEN" android:value="YOUR_ACCOUNT_TOKEN" />
+<!-- Only if your account isn't in the default region, e.g. in1, us1, sg1 -->
+<meta-data android:name="CLEVERTAP_REGION" android:value="YOUR_REGION" />
+```
+
+Without them, the plugin's methods reject with `CleverTap is not initialized`.
+
+**2. Lifecycle callback.** Register CleverTap's activity lifecycle callback in an `Application` subclass, before `super.onCreate()`. CleverTap needs it for App Launched events, sessions, in-app messages, and tracking taps on pushes that launch the app.
+
+```java
+public class MainApplication extends Application {
+    @Override
+    public void onCreate() {
+        ActivityLifecycleCallback.register(this);
+        super.onCreate();
+    }
+}
+```
+
+Point `<application android:name=".MainApplication">` at it in `AndroidManifest.xml`.
+
+**3. Push notifications.** The plugin registers CleverTap's `FcmMessageListenerService`, which receives FCM messages and renders CleverTap pushes. That's enough if CleverTap is the only thing in your app that uses FCM.
+
+If you also use `@capacitor/push-notifications`, note that Android delivers `com.google.firebase.MESSAGING_EVENT` to only one service. Remove both services and route messages through one of your own:
+
+```xml
+<!-- In <application>; needs xmlns:tools="http://schemas.android.com/tools" on <manifest> -->
+<service android:name="com.capacitorjs.plugins.pushnotifications.MessagingService" tools:node="remove" />
+<service android:name="com.clevertap.android.sdk.pushnotification.fcm.FcmMessageListenerService" tools:node="remove" />
+<service android:name=".AppMessagingService" android:exported="false">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+```
+
+```java
+public class AppMessagingService extends FirebaseMessagingService {
+    @Override
+    public void onNewToken(@NonNull String token) {
+        super.onNewToken(token);
+        PushNotificationsPlugin.onNewToken(token);
+        CleverTapAPI clevertap = CleverTapAPI.getDefaultInstance(getApplicationContext());
+        if (clevertap != null) {
+            clevertap.pushFcmRegistrationId(token, true);
+        }
+    }
+
+    @Override
+    public void onMessageReceived(@NonNull RemoteMessage message) {
+        // CleverTap pushes carry the "wzrk_pn" key.
+        if (message.getData().containsKey("wzrk_pn")) {
+            new CTFcmMessageHandler().createNotification(getApplicationContext(), message);
+        } else {
+            PushNotificationsPlugin.sendRemoteMessage(message);
+        }
+    }
+}
+```
+
+`onNewToken` only runs when the token changes, so also pass the current token to CleverTap on launch: call [`setPushTokenAs()`](#setpushtokenas) with the value from `@capacitor/push-notifications`' `registration` event.
+
+**4. Background location.** The Geofence SDK adds `ACCESS_BACKGROUND_LOCATION` to your merged manifest. Google Play treats it as a sensitive permission that needs a declaration. If you don't use geofencing, remove it:
+
+```xml
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:node="remove" />
+```
+
+### iOS
+
+**1. Credentials.** Add to `ios/App/App/Info.plist`:
+
+```xml
+<key>CleverTapAccountID</key>
+<string>YOUR_ACCOUNT_ID</string>
+<key>CleverTapToken</key>
+<string>YOUR_ACCOUNT_TOKEN</string>
+<!-- Only if your account isn't in the default region -->
+<key>CleverTapRegion</key>
+<string>YOUR_REGION</string>
+```
+
+**2. Push notifications.** CleverTap needs the APNs device token. `@capacitor/push-notifications`' `registration` event gives you that token on iOS, so pass it to [`setPushTokenAs()`](#setpushtokenas).
+
+If your `AppDelegate` replaces the token with Firebase's FCM token (common when you use Firebase Messaging), that event no longer carries the APNs token. Forward it to CleverTap natively instead:
+
+```swift
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    CleverTap.sharedInstance()?.setPushToken(deviceToken)
+    // ...your existing Firebase / Capacitor handling
+}
+```
+
+The plugin doesn't emit `onPushClicked` on iOS. Handle taps with `@capacitor/push-notifications`' `pushNotificationActionPerformed` event. To have CleverTap count the click, pass the notification's data to `CleverTap.sharedInstance()?.recordNotificationClickedEvent(withData:)` natively.
+
+If you use `@capacitor/push-notifications`, don't call `CleverTap.autoIntegrate()`. It also hooks into notification handling, which that plugin already owns.
+
+**3. Rich push (optional).** Images, GIFs and video in notifications need a Notification Service Extension. Add `CTNotificationService` to that extension's target in your `Podfile` and follow CleverTap's [rich push guide](https://developer.clevertap.com/docs/ios-rich-push-notifications).
+
+**4. Geofencing (optional).** Follow CleverTap's [iOS geofence guide](https://developer.clevertap.com/docs/geofence-ios). Start monitoring natively in `AppDelegate`, then call [`initGeofence()`](#initgeofence) from JS to receive events:
+
+```swift
+CleverTapGeofence.monitor.start(didFinishLaunchingWithOptions: launchOptions)
+```
+
+[`requestPermissions()`](#requestpermissions) needs `NSLocationWhenInUseUsageDescription` in `Info.plist`, plus `NSLocationAlwaysAndWhenInUseUsageDescription` to ask for "Always".
+
+## Usage
+
 ```typescript
 import { CleverTapAnalytics, DEBUG_LEVEL } from '@caplugins/capacitor-clevertap';
 
+// At startup. Add listeners early: taps that launched the app are delivered to the first one.
 await CleverTapAnalytics.setDebugLevel({ level: DEBUG_LEVEL.INFO });
-await CleverTapAnalytics.onUserLogin({ profileProperties: { Identity: 'user-123' } });
+await CleverTapAnalytics.addListener('onPushClicked', (push) => {
+  // Android only. Custom key-value pairs are top-level properties of `push`.
+});
+
+// When the user logs in.
+await CleverTapAnalytics.onUserLogin({
+  profileProperties: {
+    Identity: 'user-123',
+    Email: 'jane@example.com',
+    // Dates are sent as "$D_" + epoch seconds.
+    DOB: `$D_${Math.floor(new Date('1990-01-01').getTime() / 1000)}`,
+  },
+});
+
+// Events.
+await CleverTapAnalytics.recordEvent({ event: 'Product Viewed', properties: { sku: 'sku-1', price: 9.99 } });
+await CleverTapAnalytics.recordChargedEvent({
+  details: { Amount: 300, 'Charged ID': 'order-123' },
+  items: [{ Name: 'Book 1', Quantity: 1 }],
+});
 ```
+
+Every method returns a promise that rejects when its arguments are missing or malformed.
+
+## Platform differences
+
+| | Android | iOS |
+| --- | --- | --- |
+| `onPushClicked` event | Yes | No (use `@capacitor/push-notifications`) |
+| `initGeofence()` | Initializes the SDK and starts monitoring | Subscribes listeners; start monitoring natively |
+| `triggerLocation()` | Yes | No |
+| `geofenceInitializedListener` event | Yes | No |
+| `locationUpdateListener` event | Each location update, `{ lat, lng }` | When the geofence list updates, SDK payload |
+| Debug levels | `OFF`, `INFO`, `DEBUG`, `VERBOSE` | `DEBUG` and `VERBOSE` are the same |
+| Calls when CleverTap isn't configured | Reject | Resolve without doing anything |
+
+## Migrating from `capacitor-clevertap`
+
+1. Swap the package and sync. The iOS pod is now `CapluginsCapacitorClevertap` and the Android project `caplugins-capacitor-clevertap`; `npx cap sync` updates both.
+
+   ```bash
+   npm uninstall capacitor-clevertap
+   npm install @caplugins/capacitor-clevertap
+   npx cap sync
+   ```
+
+2. Change imports from `'capacitor-clevertap'` to `'@caplugins/capacitor-clevertap'`. The plugin is still `CleverTapAnalytics`, and existing calls keep working.
+3. Remove any local patches of `capacitor-clevertap`.
+4. Behaviour changes to check:
+   - Android no longer forces `VERBOSE` logging. Call [`setDebugLevel()`](#setdebuglevel) if you relied on it.
+   - Android [`setPushTokenAs()`](#setpushtokenas) now registers the token (it used to do nothing).
+   - [`triggerLocation()`](#triggerlocation) rejects when it can't run instead of resolving.
+   - On Android, `onPushClicked`'s `image` is now the picture URL.
 
 ## API
 
@@ -546,3 +742,7 @@ The geofence that was entered or exited.
 | **`VERBOSE`** | <code>3</code>  | Everything, including event and profile payloads.          |
 
 </docgen-api>
+
+## License
+
+MIT. See [LICENSE](LICENSE). Based on [`capacitor-clevertap`](https://github.com/daviozolin/capacitor-clevertap) by Davi Ozolin.
