@@ -221,7 +221,7 @@ public class CleverTapPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDele
       return
     }
 
-    guard let value = call.getFloat("value") else {
+    guard let value = call.getDouble("value") else {
       call.reject("value missing or malformatted")
       return
     }

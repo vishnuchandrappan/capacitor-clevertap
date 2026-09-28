@@ -243,13 +243,14 @@ public class CleverTapAnalyticsPlugin extends Plugin implements CTPushNotificati
             return;
         }
 
-        Float value = call.getFloat("value");
-        if (value == null) {
+        // Read the raw Number: getDouble() returns null for integers outside the int range (they arrive as Long).
+        Object value = call.getData().opt("value");
+        if (!(value instanceof Number)) {
             call.reject("value details missing or malformatted");
             return;
         }
 
-        clevertap.incrementValue(key, value);
+        clevertap.incrementValue(key, (Number) value);
 
         call.resolve();
     }
